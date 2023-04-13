@@ -26,7 +26,7 @@ class PostCommand extends Command
      */
     public function handle()
     {
-        // 
-        Http::get('http://localhost:8000/api/addsheetdata-google-api#stack');    
+        $result = Http::get('http://localhost:8000/api/addsheetdata-google-api');    
+        echo $result;
     }
 }

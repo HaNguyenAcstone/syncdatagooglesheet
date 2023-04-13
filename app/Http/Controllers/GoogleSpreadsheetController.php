@@ -2,13 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use DateTimeImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Sheets;
+use Illuminate\Support\Facades\Storage;
+use Revolution\Google\Sheets\Facades\Sheets as FacadesSheets;
+
 
 class GoogleSpreadsheetController extends Controller
 {
-    public $dataPost;
+    private static $FILE_NAME = 'post.txt';
+    private static $DISK_FOLDER = 'public';
+
+    private static $ID_SHEET = '1Y40m28jPcaoYuunS9zIIr_zCfGGbBHa05i26hWUdpDs';
+    private static $NAME_SHEET = 'Trang tính1';
+    
     //
     public function addsheetdata()
     {
@@ -17,29 +25,36 @@ class GoogleSpreadsheetController extends Controller
         ->where('post_status', '!=', 'wc-pending')
         ->where('post_status', '!=', 'wc-trash')->get();
 
-        return $this->dataPost;
-        if(($this->dataPost ? $this->dataPost->count() : 0) == $results->count()) {
+        $contents = Storage::disk(self::$DISK_FOLDER)->get(self::$FILE_NAME);
+
+        if(($contents ? (int)$contents : 0) == $results->count()) {
             return response()->json([
                 'status' => 400,
                 'message' => 'Nothing changes'
             ], 400);
         }
 
-        $data = array_slice($results->toArray(), ($this->dataPost ? $this->dataPost->count() : 0), $results->count());
+        $data = array_slice($results->toArray(), ($contents ?  (int)$contents : 0), count($results->toArray()));
         $rows = [];
+
+        // return response()->json([
+        //     'status' => 400,
+        //     'message' => $data
+        // ], 400);
 
         foreach($data as $value) {
             $arrTemp = [];
             foreach((array)$value as $valueObj) {
-                array_push($arrTemp, $valueObj);
+                array_push($arrTemp, $valueObj ? $valueObj : 0);
             }
 
             array_push($rows, $arrTemp);
         }
-        
-        Sheets::spreadsheet('1Y40m28jPcaoYuunS9zIIr_zCfGGbBHa05i26hWUdpDs')->sheet('Trang tính1')->append($rows);
+
+        Storage::disk(self::$DISK_FOLDER)->put(self::$FILE_NAME, count($results->toArray()));
+
+        FacadesSheets::spreadsheet(self::$ID_SHEET)->sheet(self::$NAME_SHEET)->append($rows);
         dd('Data Added in Sheet');
-        $this->dataPost = $results;
     }
 
     public function getPost() { 
@@ -56,7 +71,45 @@ class GoogleSpreadsheetController extends Controller
             array_push($rows, $arrTemp);
         }
 
-        return $rows;
+        $count = count($rows);
+
+        $contents = Storage::disk('public')->get('post.txt');
+
+        return $contents;
+    }
+
+    public function createPost(Request $request) {
+        $now = new DateTimeImmutable();
+        DB::table('post')->insert([
+            'id' => $request->id,
+            'post_author' => $request->post_author,
+            'post_date' => date_format($now, 'Y-m-d H:i:s'),
+            'post_date_gmt' => date_format($now, 'Y-m-d H:i:s'),
+            'post_content' => '',
+            'post_title' => '',
+            'post_excerpt' => '',
+            'post_status' => $request->post_status,
+            'comment_status' => 'open',
+            'ping_status' => 'closed',
+            'post_password' => '',
+            'post_name' => '',
+            'to_ping' => '',
+            'pinged' => '',
+            'post_modified' => date_format($now, 'Y-m-d H:i:s'),
+            'post_modified_gmt' => date_format($now, 'Y-m-d H:i:s'),
+            'post_content_filtered' => '',
+            'post_parent' => 0,
+            'guid' => '',
+            'menu_order' => 0,
+            'post_type' => 'shop_order',
+            'post_mime_type' => '',
+            'comment_count' => 0,
+        ]);
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Created Post Successfully.',
+        ], 200);
     }
 
     public function getCustomer() {

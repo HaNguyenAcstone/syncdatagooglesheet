@@ -15,9 +15,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 Route::get('/addsheetdata-google-api', [GoogleSpreadsheetController::class, 'addsheetdata']);
 Route::get('/customer', [GoogleSpreadsheetController::class, 'getPost']);
+Route::post('/create/post', [GoogleSpreadsheetController::class, 'createPost']);
